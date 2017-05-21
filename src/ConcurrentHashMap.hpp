@@ -20,15 +20,18 @@ public:
 	ConcurrentHashMap();
 	~ConcurrentHashMap();
 	void addAndInc(string key);
+	bool member(string key);
+
 
 private:
-	Lista < pair<string, unsigned int> >[SIZE_TABLE] hash_table;
+	Lista < pair<string, unsigned int> >[SIZE_TABLE] tabla;
 	unsigned int fHash(const unsigned int n) const;
 
 };
 
+
 ConcurrentHashMap::ConcurrentHashMap() {
-	hash_table = Lista < pair<string, unsigned int> >[SIZE_TABLE];
+	tabla = Lista < pair<string, unsigned int> >[SIZE_TABLE];
 	for (int i = 0; i < SIZE_TABLE; ++i){
 		Lista();
 	}
@@ -39,10 +42,38 @@ unsigned int fHash(const char letra) const{
 }
 
 void ConcurrentHashMap::addAndInc(string key){
+	unsigned int posicion = fHash(key[0]);
+	bool pertenece = false;
+	Iterador it = tabla[posicion].CrearIt();
 	
+	while(it.HaySiguiente()){
+		if(it.Siguiente().first == key){
+			it.Siguiente().second()++;
+			pertenece = true;
+		}
+		it.Avanzar();
+	}
 	
+	if (!pertenece){
+		pair<string, unsigned int> dicc_entry (key,1);
+		tabla[posicion].push_front(dicc_entry);
+	}
 }
 
+bool ConcurrentHashMap::member(string key){
+	unsigned int posicion = fHash(key[0]);
+	bool pertenece = false;
+	Iterador it = tabla[posicion].CrearIt();
+
+	while(it.HaySiguiente()){
+		if(it.Siguiente().first == key){
+			pertenece = true;
+		}
+		it.Avanzar();
+	}
+	
+	return pertenece;
+}
 
 
 
