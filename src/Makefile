@@ -14,6 +14,8 @@ OBJ = ConcurrentHashMap.o
 
 all: $(BIN)
 
+$(BIN): ListaAtomica.hpp
+
 test-2: $(OBJ) test-2.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ test-2.cpp $(OBJ) $(LDLIBS)
 	
