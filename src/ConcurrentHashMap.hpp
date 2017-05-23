@@ -4,7 +4,7 @@
 #include <atomic>
 #include <vector>
 #include <string>
-#include <pair>
+#include <utility>
 #include <list>
 #include <iostream>
 #include <fstream>
@@ -15,7 +15,7 @@
 #include "ListaAtomica.hpp"
 using namespace std;
 
-int SIZE_TABLE = 26;
+const int SIZE_TABLE = 26;
 //typedef pair<string, unsigned int> Entry;
 
 
@@ -29,15 +29,15 @@ public:
 	pair<string, unsigned int> maximum(unsigned int nt);
 
 private:
-	Lista < pair<string, unsigned int> >[SIZE_TABLE] tabla;
+	Lista < pair<string, unsigned int> > tabla[SIZE_TABLE];
 	unsigned int fHash(const unsigned int n) const;
 	
 };
 
 ConcurrentHashMap::ConcurrentHashMap() {
-	tabla = Lista < pair<string, unsigned int> >[SIZE_TABLE];
 	for (int i = 0; i < SIZE_TABLE; ++i){
-		Lista();
+		Lista< pair<string, unsigned int> > list;
+		tabla[i] = list;
 	}
 }
 
@@ -134,24 +134,24 @@ struct thread_data{
 	inFile.close();
  }
 
-ConcurrentHashMap count_words2(list<string>archs){
+// ConcurrentHashMap count_words2(list<string>archs){
 
-	unsigned int num_threads = archs.size();
-	pthread_t threads[num_threads];
-	ConcurrentHashMap map;
+// 	unsigned int num_threads = archs.size();
+// 	pthread_t threads[num_threads];
+// 	ConcurrentHashMap map;
 
-	for (int t = 0; t < num_threads; ++t){
-		thread_data datos = {&map, archs[t]}; //LIST NO TIENE ACCESO CON [], HIJOS DE PUTA, TANTO LES COSTABA PONER UN VECTOR.
+// 	for (int t = 0; t < num_threads; ++t){
+// 		thread_data datos = {&map, archs[t]}; 
 
-		rc = pthread_create(&threads[t], NULL, llenarHashMap, (void *)datos);
-		if (rc){
-		  printf("ERROR; return code from pthread_create() is %d\n", rc);
-		  exit(-1);
-		}
+// 		rc = pthread_create(&threads[t], NULL, llenarHashMap, (void *)datos);
+// 		if (rc){
+// 		  printf("ERROR; return code from pthread_create() is %d\n", rc);
+// 		  exit(-1);
+// 		}
 
-    pthread_exit(NULL);
+//     pthread_exit(NULL);
 
-}
+// }
 
 
 /*pthread_create arguments:

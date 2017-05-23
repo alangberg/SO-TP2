@@ -30,7 +30,7 @@ public:
 		/* Completar. Debe ser atómico. */
 
 		//LINK DEL ROBO: http://en.cppreference.com/w/cpp/atomic/atomic_compare_exchange
-		Nodo* new_node = new Node(val);
+		Nodo* new_node = new Nodo(val);
 
 		new_node->_next = _head.load(); //siguiente del nodo nuevo = cabeza actual
 
