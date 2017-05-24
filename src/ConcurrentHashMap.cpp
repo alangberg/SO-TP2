@@ -11,10 +11,15 @@ ConcurrentHashMap::ConcurrentHashMap() {
 }
   
 ConcurrentHashMap::~ConcurrentHashMap() {
-  for (int i = 0; i < SIZE_TABLE; i++) {
-    delete tabla[i];
-  }
+  // for (int i = 0; i < SIZE_TABLE; i++) {
+  //   cout<<"borrando "<<i<<endl;
+  //   delete tabla[i];
+  //   cout<<"chau "<<i<<endl;
+  // }
 }
+
+
+
 
 void ConcurrentHashMap::addAndInc(string key){
   unsigned int posicion = fHash(key[0]);
@@ -38,16 +43,16 @@ void ConcurrentHashMap::addAndInc(string key){
 }
 
 bool ConcurrentHashMap::member(string key){
-  unsigned int posicion = fHash(key[0]);
-  auto it = tabla[posicion]->CrearIt();
+  // unsigned int posicion = fHash(key[0]);
+  // auto it = tabla[posicion]->CrearIt();
 
-  while(it.HaySiguiente()){
-    if(it.Siguiente().first == key){
-      return true;
-    }
-    it.Avanzar();
-  }
-  return false;
+  // while(it.HaySiguiente()){
+  //   if(it.Siguiente().first == key){
+  //     return true;
+  //   }
+  //   it.Avanzar();
+  // }
+  // return false;
 }
 
 pair<string, unsigned int> ConcurrentHashMap::maximum(unsigned int nt) {
@@ -71,6 +76,7 @@ ConcurrentHashMap ConcurrentHashMap::count_words(string arch){
   }
 
   inFile.close();
+  return map;
 }
 
 /*EJERCICIO 2.3

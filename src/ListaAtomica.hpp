@@ -2,6 +2,8 @@
 #define LISTA_ATOMICA_H__
 
 #include <atomic>
+#include <iostream>
+using namespace std;
 
 template <typename T>
 class Lista {
