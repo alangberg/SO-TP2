@@ -30,16 +30,17 @@ public:
 		/* Completar. Debe ser atómico. */
 
 		//LINK DEL ROBO: http://en.cppreference.com/w/cpp/atomic/atomic_compare_exchange
+		
 		Nodo* new_node = new Nodo(val);
 
 		new_node->_next = _head.load(); //siguiente del nodo nuevo = cabeza actual
-
+		_head.store(new_node);
 		//Ahora quiero que mi nodo nuevo sea la cabeza
 		//Podria haberse colado otro nodo nuevo y haberse hecho cabeza
 		//Tengo que actualizar mi next y ser yo cabeza
 
-		while(!std::atomic_compare_exchange_weak_explicit(&_head, &new_node->_next, new_node, std::memory_order_release, std::memory_order_relaxed)){
-		}
+		//while(!std::atomic_compare_exchange_weak_explicit(&_head, &new_node->_next, new_node, std::memory_order_release, std::memory_order_relaxed)){
+		//}
 
 	}
 

@@ -4,20 +4,20 @@
 
 CXX = g++
 CXXFLAGS = -std=c++11
-LDLIBS = -lpthread
+LDLIBS = -pthread
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $<
 
-BIN = ConcurrentHashMap
+BIN = ConcurrentHashMap test-2  
 OBJ = ConcurrentHashMap.o
 
 all: $(BIN)
 
 $(BIN): ListaAtomica.hpp
 
-ConcurrentHashMap: $ ConcurrentHashMap.hpp
-	$(CXX) $(CXXFLAGS) ConcurrentHashMap.hpp -o ConcurrentHashMap.o
+ConcurrentHashMap:
+	$(CXX) $(CXXFLAGS) -c ConcurrentHashMap.cpp -o ConcurrentHashMap.o
 
 test-2: $(OBJ) test-2.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ test-2.cpp $(OBJ) $(LDLIBS)
@@ -25,7 +25,7 @@ test-2: $(OBJ) test-2.cpp
 test-2-run: test-2
 	awk -f corpus.awk corpus | sort >corpus-post
 	./test-2 | sort | diff -u - corpus-post
-	rm -f corpus-post
+	rm -f corpus-post	
 
 test-3: $(OBJ) test-3.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ test-3.cpp $(OBJ) $(LDLIBS)
@@ -47,6 +47,9 @@ test-5-run: test-5
 		./test-5 $$((i + 1)) $$((j + 1)) | diff -u - corpus-max; \
 	done; done
 	rm -f corpus-max corpus-[0-4]
+
+lista:
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) testlista.cpp -o mainLista
 
 clean:
 	rm -f $(BIN) $(OBJ)
