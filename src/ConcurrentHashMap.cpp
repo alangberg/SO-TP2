@@ -1,12 +1,10 @@
 #include "ConcurrentHashMap.hpp"
 
-// const int SIZE_TABLE = 26;
-#define SIZE_TABLE 26
-
 ConcurrentHashMap::ConcurrentHashMap() {
-  for (int i = 0; i < SIZE_TABLE; ++i) {
+  for (int i = 0; i < SIZE_TABLE; i++) {
     Lista< pair<string, unsigned int> > * list = new Lista< pair<string, unsigned int> >();
     tabla.push_back(list);
+    pthread_mutex_init(&mutex[i], NULL);
   }
 }
   
@@ -19,15 +17,14 @@ ConcurrentHashMap::~ConcurrentHashMap() {
 }
 
 
-
-
-void ConcurrentHashMap::addAndInc(string key){
+void ConcurrentHashMap::addAndInc(string key) {
   unsigned int posicion = fHash(key[0]);
   bool pertenece = false;
   auto it = tabla[posicion]->CrearIt();
+  pthread_mutex_lock(&mutex[posicion]);
 
-  while(it.HaySiguiente() && !pertenece) {
-    if(it.Siguiente().first == key) {
+  while (it.HaySiguiente() && !pertenece) {
+    if (it.Siguiente().first == key) {
       
       it.Siguiente().second++;
       
@@ -40,19 +37,21 @@ void ConcurrentHashMap::addAndInc(string key){
     pair<string, unsigned int> dicc_entry (key,1);
     tabla[posicion]->push_front(dicc_entry);
   }
+
+  pthread_mutex_unlock(&mutex[posicion]);
 }
 
 bool ConcurrentHashMap::member(string key){
-  // unsigned int posicion = fHash(key[0]);
-  // auto it = tabla[posicion]->CrearIt();
+  unsigned int posicion = fHash(key[0]);
+  auto it = tabla[posicion]->CrearIt();
 
-  // while(it.HaySiguiente()){
-  //   if(it.Siguiente().first == key){
-  //     return true;
-  //   }
-  //   it.Avanzar();
-  // }
-  // return false;
+  while(it.HaySiguiente()) {
+    if(it.Siguiente().first == key){
+      return true;
+    }
+    it.Avanzar();
+  }
+  return false;
 }
 
 pair<string, unsigned int> ConcurrentHashMap::maximum(unsigned int nt) {
@@ -84,52 +83,63 @@ Implementar una función ConcurrentHashMap count words(list<string>archs), que t
 me como parámetro una lista de archivos de texto y devuelva el ConcurrentHashMap cargado
 con esas palabras. Deberá utilizar un thread por archivo.*/
 
-struct thread_data{
-   //int  thread_id;
-   ConcurrentHashMap* map;
-   string archivo;
+struct thread_data { 
+  unsigned int thread_id;
+  ConcurrentHashMap* map;
+  string archivo;
 };
 
+void *llenarHashMap(void *thread_args) {
+  struct thread_data* my_data;
+  my_data = (struct thread_data*) thread_args;
 
- void *llenarHashMap(void *threadarg){
-  
-    struct thread_data *my_data;
-    my_data = (struct thread_data *) threadarg;
-
-    string arch = my_data->archivo;
+  string arch = my_data->archivo;
 
   ifstream inFile;
   inFile.open(arch.c_str()); 
 
   string word;
 
-  while (inFile >> word){
-    //todo revisar esto
+  while (inFile >> word)
     (my_data->map)->addAndInc(word);
-  }
 
   inFile.close();
- }
 
-// ConcurrentHashMap count_words2(list<string>archs){
+  printf("[%d] Thread dead.\n", my_data->thread_id);
+  pthread_exit(NULL);
+}
 
-//  unsigned int num_threads = archs.size();
-//  pthread_t threads[num_threads];
-//  ConcurrentHashMap map;
+ConcurrentHashMap ConcurrentHashMap::count_words(list<string> archs) {
 
-//  for (int t = 0; t < num_threads; ++t){
-//    thread_data datos = {&map, archs[t]}; 
+  unsigned int num_threads = archs.size();
+  pthread_t threads[num_threads];
+  ConcurrentHashMap map;
 
-//    rc = pthread_create(&threads[t], NULL, llenarHashMap, (void *)datos);
-//    if (rc){
-//      printf("ERROR; return code from pthread_create() is %d\n", rc);
-//      exit(-1);
-//    }
+  int rc;
+  list<string>::iterator it = archs.begin();
+  for (unsigned int t = 0; t < num_threads; t++) {
+    thread_data args = {t, &map, *it};  
+    rc = pthread_create(&threads[t], NULL, llenarHashMap, (void*) &args);
+    printf("Thread %d created.\n", t);
+  
+    if (rc) {
+      printf("ERROR; return code from pthread_create() is %d\n", rc);
+      exit(-1);
+    }
+    it++;
+  }
 
-//     pthread_exit(NULL);
+  void *status;
+  for (int t = 0; t < num_threads; t++) {
+    rc = pthread_join(threads[t], &status);
+    if (rc) {
+      printf("ERROR; return code from pthread_join() is %d\n", rc);
+      exit(-1);
+    }
+  }
 
-// }
-
+  return map;
+}
 
 /*pthread_create arguments:
 thread: An opaque, unique identifier for the new thread returned by the subroutine.
