@@ -2,6 +2,8 @@
 
 #define debug 0
 
+std::atomic_int proximaFila;
+
 ConcurrentHashMap::ConcurrentHashMap() {
   for (int i = 0; i < SIZE_TABLE; i++) {
     Lista< pair<string, unsigned int> > * list = new Lista< pair<string, unsigned int> >();
@@ -56,7 +58,68 @@ bool ConcurrentHashMap::member(string key){
   return false;
 }
 
+struct thread_data_max { 
+  int thread_id;
+  ConcurrentHashMap* map;
+  pair<string,unsigned int> res;
+};
+
+void *maximumHandler(void *thread_args) {
+  struct thread_data_max* my_data;
+
+  my_data = (struct thread_data_max*) thread_args;
+
+	
+	pair<string,unsigned int> res_thread_i("",0);
+	int maxApariciones = 0;
+
+	//inicialmente se le asigna a cada thread la fila correspondiente a su id
+  int filaARecorrer = my_data->thread_id;
+
+  while(filaARecorrer < SIZE_TABLE){
+		auto it = my_data->map->tabla[filaARecorrer]->CrearIt();
+
+	  while(it.HaySiguiente()){
+	  	auto t = it.Siguiente();
+	  	int aparicionesActual = t.second;
+	  	if(aparicionesActual > maxApariciones){
+	  		res_thread_i = t;
+	  		maxApariciones = aparicionesActual;
+	  	}
+	  	it.Avanzar();
+	  }
+		filaARecorrer = std::atomic_fetch_add(&proximaFila,1);
+	}
+  my_data->res = res_thread_i;
+  pthread_exit(NULL);
+}
+
 pair<string, unsigned int> ConcurrentHashMap::maximum(unsigned int nt) {
+	//como voy a asignar al thread 0 a la fila,al thread nt-1 a la fila nt-1
+	//la proxima fila libre sera nt
+	proximaFila = nt;
+
+	pthread_t threads[nt];
+	vector<thread_data_max*> array_params;
+	pair<string,unsigned int> sol[nt];
+	int rc;
+	for (int t = 0; t < nt; t++){
+	pair<string,unsigned int>resultado("asaf",0);
+		thread_data_max args = {t, this,resultado};
+		array_params.push_back(&	args);
+    rc = pthread_create(&threads[t], NULL, maximumHandler, (void*) &args);
+ 	  rc = pthread_join(threads[t], NULL);
+ 	  sol[t] = array_params[t]->res;
+
+	}
+
+	pair<string,unsigned int> res = sol[0];
+	for (int t = 0; t < nt; t++){
+		if(sol[t].second > res.second){
+			res = sol[t];
+		}
+	}
+	return res;
 
 }
 
