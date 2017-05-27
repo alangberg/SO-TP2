@@ -1,5 +1,7 @@
 #include "ConcurrentHashMap.hpp"
 
+#define debug 0
+
 ConcurrentHashMap::ConcurrentHashMap() {
   for (int i = 0; i < SIZE_TABLE; i++) {
     Lista< pair<string, unsigned int> > * list = new Lista< pair<string, unsigned int> >();
@@ -10,9 +12,9 @@ ConcurrentHashMap::ConcurrentHashMap() {
   
 ConcurrentHashMap::~ConcurrentHashMap() {
   // for (int i = 0; i < SIZE_TABLE; i++) {
-  //   cout<<"borrando "<<i<<endl;
-  //   delete tabla[i];
-  //   cout<<"chau "<<i<<endl;
+    // cout<<"borrando "<<i<<endl;
+    // delete tabla[i];
+    // cout<<"chau "<<i<<endl;
   // }
 }
 
@@ -20,8 +22,8 @@ ConcurrentHashMap::~ConcurrentHashMap() {
 void ConcurrentHashMap::addAndInc(string key) {
   unsigned int posicion = fHash(key[0]);
   bool pertenece = false;
-  auto it = tabla[posicion]->CrearIt();
   pthread_mutex_lock(&mutex[posicion]);
+  auto it = tabla[posicion]->CrearIt();
 
   while (it.HaySiguiente() && !pertenece) {
     if (it.Siguiente().first == key) {
@@ -83,13 +85,7 @@ Implementar una función ConcurrentHashMap count words(list<string>archs), que t
 me como parámetro una lista de archivos de texto y devuelva el ConcurrentHashMap cargado
 con esas palabras. Deberá utilizar un thread por archivo.*/
 
-struct thread_data { 
-  unsigned int thread_id;
-  ConcurrentHashMap* map;
-  string archivo;
-};
-
-void *llenarHashMap(void *thread_args) {
+void *ConcurrentHashMap::llenarHashMap(void *thread_args) {
   struct thread_data* my_data;
   my_data = (struct thread_data*) thread_args;
 
@@ -119,7 +115,7 @@ ConcurrentHashMap ConcurrentHashMap::count_words(list<string> archs) {
   list<string>::iterator it = archs.begin();
   for (unsigned int t = 0; t < num_threads; t++) {
     thread_data args = {t, &map, *it};  
-    rc = pthread_create(&threads[t], NULL, llenarHashMap, (void*) &args);
+    rc = pthread_create(&threads[t], NULL, ConcurrentHashMap::llenarHashMap, (void*) &args);
     printf("Thread %d created.\n", t);
   
     if (rc) {
@@ -141,6 +137,7 @@ ConcurrentHashMap ConcurrentHashMap::count_words(list<string> archs) {
   return map;
 }
 
+// 
 /*pthread_create arguments:
 thread: An opaque, unique identifier for the new thread returned by the subroutine.
 attr: An opaque attribute object that may be used to set thread attributes. You can specify a thread attributes object, or NULL for the default values.
@@ -148,4 +145,84 @@ start_routine: the C routine that the thread will execute once it is created.
 arg: A single argument that may be passed to start_routine. It must be passed by reference as a pointer cast of type void. NULL may be used if no argument is to be passed.
 */
 
+ConcurrentHashMap ConcurrentHashMap::count_words(unsigned int num_threads, list<string> archs) {
 
+  pthread_t threads[num_threads];
+  unsigned int num_archs = archs.size();
+  ConcurrentHashMap map;
+
+  int return_code;
+  list<string>::iterator it_inicio = archs.begin();
+  list<string>::iterator it_fin = archs.end();
+  pthread_mutex_t mutex_threads[num_threads];
+  pthread_mutex_t mutex_it;
+  pthread_mutex_init(&mutex_it, NULL);
+  for (int i = 0; i < num_threads; ++i) {
+    pthread_mutex_init(&mutex_threads[i], NULL);
+    pthread_mutex_lock(&mutex_threads[i]);
+  }
+
+  vector<thread_data2> args;
+  for (int i = 0; i < num_threads; ++i) {
+    thread_data2 arg_i;
+    args.push_back(arg_i);
+  }
+
+  for (unsigned int t = 0; t < num_threads && t < num_archs; t++) {
+    args[t] = {t, &map, &it_inicio, it_fin, &mutex_threads[t], &mutex_it};
+    return_code = pthread_create(&threads[t], NULL, ConcurrentHashMap::llenarHashMap2, (void*) &args[t]);
+    if (debug) printf("Thread %d created.\n", t);
+  
+    if (return_code) {
+      printf("ERROR; return code from pthread_create() is %d\n", return_code);
+      exit(-1);
+    }
+  }
+  for (int i = 0; i < num_threads; ++i)
+    pthread_mutex_unlock(&mutex_threads[i]);
+
+  void *status;
+  for (int t = 0; t < num_threads; t++) {
+    return_code = pthread_join(threads[t], &status);
+    if (return_code) {
+      printf("ERROR; return code from pthread_join() is %d\n", return_code);
+      exit(-1);
+    }
+  }
+  return map;
+}
+
+void *ConcurrentHashMap::llenarHashMap2(void *thread_args) {
+  
+  struct thread_data2* my_data;
+  my_data = (struct thread_data2*) thread_args;
+  list<string>::iterator* it = my_data->it_inicio;
+  list<string>::iterator it_fin = my_data->it_fin; // esta bien por copia? No explota?
+  pthread_mutex_lock(my_data->mutex_inicio);
+  ifstream inFile;
+  string arch;
+  // comparamos el iterador que apunta al ultimo archivo leido, contra el iterador que apunta al final de la lista 
+  while (true) {
+    pthread_mutex_lock(my_data->mutex_it);
+    if (*it != it_fin) {
+      arch = *(*it);
+      (*it)++;
+    }
+    else
+      break;
+    pthread_mutex_unlock(my_data->mutex_it);
+
+    inFile.open(arch.c_str()); 
+    string word;
+
+    while (inFile >> word)
+      (my_data->map)->addAndInc(word);
+
+    inFile.close();
+  }
+  pthread_mutex_unlock(my_data->mutex_it);
+  pthread_mutex_unlock(my_data->mutex_inicio);
+
+  if (debug) printf("[%d] Thread dead.\n", my_data->thread_id);
+  pthread_exit(NULL);
+}

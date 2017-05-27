@@ -26,12 +26,30 @@ class ConcurrentHashMap {
 		pair<string, unsigned int> maximum(unsigned int nt);
 		static ConcurrentHashMap count_words(string arch);
 	  static ConcurrentHashMap count_words(list<string> archs);
+		static ConcurrentHashMap count_words(unsigned int num_threads, list<string> archs);
+		static void* llenarHashMap(void *thread_args);
+		static void* llenarHashMap2(void *thread_args);
 		vector< Lista < pair<string, unsigned int> >* > tabla;
 
 	private:
 		unsigned int fHash(const char letra) {
 	  	return (int)letra - 97;
 		}
+
+		struct thread_data { 
+		  unsigned int thread_id;
+		  ConcurrentHashMap* map;
+		  string archivo;
+		};
+
+		struct thread_data2 { 
+		  unsigned int thread_id;
+		  ConcurrentHashMap* map;
+		  list<string>::iterator* it_inicio;
+		  list<string>::iterator it_fin;
+		  pthread_mutex_t* mutex_inicio;
+		  pthread_mutex_t* mutex_it;
+		};
 
 		pthread_mutex_t mutex[SIZE_TABLE];
 
