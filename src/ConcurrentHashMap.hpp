@@ -24,6 +24,7 @@ class ConcurrentHashMap {
 		void addAndInc(string key);
 		bool member(string key);
 		pair<string, unsigned int> maximum(unsigned int nt);
+		static void* maximum_thread(void *thread_args);
 		static ConcurrentHashMap count_words(string arch);
 	  static ConcurrentHashMap count_words(list<string> archs);
 		static ConcurrentHashMap count_words(unsigned int num_threads, list<string> archs);
@@ -49,9 +50,18 @@ class ConcurrentHashMap {
 		  list<string>::iterator it_fin;
 		  pthread_mutex_t* mutex_inicio;
 		  pthread_mutex_t* mutex_it;
+			};
+
+		struct thread_data_max { 
+		  unsigned int thread_id;
+		  ConcurrentHashMap* map;
+		 	vector< pair<string, unsigned int> >* maximos;
+		  pthread_mutex_t* mutex_inicio;
+		  atomic<int>* fila;
 		};
 
 		pthread_mutex_t mutex[SIZE_TABLE];
+		pthread_mutex_t mutex_buscando_max;
 
 };
 

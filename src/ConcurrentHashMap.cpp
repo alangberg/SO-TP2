@@ -2,14 +2,13 @@
 
 #define debug 0
 
-std::atomic_int proximaFila;
-
 ConcurrentHashMap::ConcurrentHashMap() {
   for (int i = 0; i < SIZE_TABLE; i++) {
     Lista< pair<string, unsigned int> > * list = new Lista< pair<string, unsigned int> >();
     tabla.push_back(list);
     pthread_mutex_init(&mutex[i], NULL);
   }
+  pthread_mutex_init(&mutex_buscando_max, NULL);
 }
   
 ConcurrentHashMap::~ConcurrentHashMap() {
@@ -58,69 +57,78 @@ bool ConcurrentHashMap::member(string key){
   return false;
 }
 
-struct thread_data_max { 
-  int thread_id;
-  ConcurrentHashMap* map;
-  pair<string,unsigned int> res;
-};
-
-void *maximumHandler(void *thread_args) {
+void *ConcurrentHashMap::maximum_thread(void *thread_args) {
   struct thread_data_max* my_data;
-
   my_data = (struct thread_data_max*) thread_args;
+  pthread_mutex_lock(my_data->mutex_inicio);
+  
+  unsigned int fila_actual;
+  while ((fila_actual = atomic_fetch_add(my_data->fila, 1)) < SIZE_TABLE) {
+    Lista< pair<string, unsigned int> >::Iterador it = my_data->map->tabla[fila_actual]->CrearIt();
+    
+    while (it.HaySiguiente()) {
+      pair<string, unsigned int> t = it.Siguiente();
+      if (t.second > (*my_data->maximos)[fila_actual].second)
+        (*my_data->maximos)[fila_actual] = t;
+      it.Avanzar();
+    }
+  }
 
-	
-	pair<string,unsigned int> res_thread_i("",0);
-	int maxApariciones = 0;
-
-	//inicialmente se le asigna a cada thread la fila correspondiente a su id
-  int filaARecorrer = my_data->thread_id;
-
-  while(filaARecorrer < SIZE_TABLE){
-		auto it = my_data->map->tabla[filaARecorrer]->CrearIt();
-
-	  while(it.HaySiguiente()){
-	  	auto t = it.Siguiente();
-	  	int aparicionesActual = t.second;
-	  	if(aparicionesActual > maxApariciones){
-	  		res_thread_i = t;
-	  		maxApariciones = aparicionesActual;
-	  	}
-	  	it.Avanzar();
-	  }
-		filaARecorrer = std::atomic_fetch_add(&proximaFila,1);
-	}
-  my_data->res = res_thread_i;
+  pthread_mutex_unlock(my_data->mutex_inicio);
+  if (debug) printf("[%d] Thread dead.\n", my_data->thread_id);
   pthread_exit(NULL);
+
 }
 
 pair<string, unsigned int> ConcurrentHashMap::maximum(unsigned int nt) {
-	//como voy a asignar al thread 0 a la fila,al thread nt-1 a la fila nt-1
-	//la proxima fila libre sera nt
-	proximaFila = nt;
+  pthread_t threads[nt];
 
-	pthread_t threads[nt];
-	vector<thread_data_max*> array_params;
-	pair<string,unsigned int> sol[nt];
-	int rc;
-	for (int t = 0; t < nt; t++){
-	pair<string,unsigned int>resultado("asaf",0);
-		thread_data_max args = {t, this,resultado};
-		array_params.push_back(&	args);
-    rc = pthread_create(&threads[t], NULL, maximumHandler, (void*) &args);
- 	  rc = pthread_join(threads[t], NULL);
- 	  sol[t] = array_params[t]->res;
+  int return_code;
 
-	}
+  pthread_mutex_t mutex_threads[nt];
+  for (int i = 0; i < nt; ++i) {
+    pthread_mutex_init(&mutex_threads[i], NULL);
+    pthread_mutex_lock(&mutex_threads[i]);
+  }
 
-	pair<string,unsigned int> res = sol[0];
-	for (int t = 0; t < nt; t++){
-		if(sol[t].second > res.second){
-			res = sol[t];
-		}
-	}
-	return res;
+  vector<thread_data_max> args;
+  for (int i = 0; i < nt; ++i) {
+    thread_data_max arg_i;
+    args.push_back(arg_i);
+  }
+  
+  atomic<int> fila(0);
+  pair<string, unsigned int> max_inicial("max_inicial", 0);
+  vector< pair<string, unsigned int> > maximos(SIZE_TABLE, max_inicial);
+  for (unsigned int t = 0; t < nt && t < SIZE_TABLE; t++) {
+    args[t] = {t, this, &maximos, &mutex_threads[t], &fila};
+    return_code = pthread_create(&threads[t], NULL, ConcurrentHashMap::maximum_thread, (void*) &args[t]);
+    if (debug) printf("Thread %d created.\n", t);
+  
+    if (return_code) {
+      printf("ERROR; return code from pthread_create() is %d\n", return_code);
+      exit(-1);
+    }
+  }
+  for (int i = 0; i < nt; ++i)
+    pthread_mutex_unlock(&mutex_threads[i]);
 
+  void *status;
+  for (int t = 0; t < nt; t++) {
+    return_code = pthread_join(threads[t], &status);
+    if (return_code) {
+      printf("ERROR; return code from pthread_join() is %d\n", return_code);
+      exit(-1);
+    }
+  }
+
+  pair<string, unsigned int> max = maximos[0];
+  for (int i = 1; i < SIZE_TABLE; ++i) {
+    if (max.second < maximos[i].second)
+      max = maximos[i];
+  }
+
+  return max;
 }
 
 
@@ -174,15 +182,20 @@ ConcurrentHashMap ConcurrentHashMap::count_words(list<string> archs) {
   pthread_t threads[num_threads];
   ConcurrentHashMap map;
 
-  int rc;
+  int return_code;
+  vector<thread_data> args;
+  for (int i = 0; i < num_threads; ++i) {
+    thread_data arg_i;
+    args.push_back(arg_i);
+  }
   list<string>::iterator it = archs.begin();
   for (unsigned int t = 0; t < num_threads; t++) {
-    thread_data args = {t, &map, *it};  
-    rc = pthread_create(&threads[t], NULL, ConcurrentHashMap::llenarHashMap, (void*) &args);
+    args[t] = {t, &map, *it};  
+    return_code = pthread_create(&threads[t], NULL, ConcurrentHashMap::llenarHashMap, (void*) &args[t]);
     printf("Thread %d created.\n", t);
   
-    if (rc) {
-      printf("ERROR; return code from pthread_create() is %d\n", rc);
+    if (return_code) {
+      printf("ERROR; return code from pthread_create() is %d\n", return_code);
       exit(-1);
     }
     it++;
@@ -190,9 +203,9 @@ ConcurrentHashMap ConcurrentHashMap::count_words(list<string> archs) {
 
   void *status;
   for (int t = 0; t < num_threads; t++) {
-    rc = pthread_join(threads[t], &status);
-    if (rc) {
-      printf("ERROR; return code from pthread_join() is %d\n", rc);
+    return_code = pthread_join(threads[t], &status);
+    if (return_code) {
+      printf("ERROR; return code from pthread_join() is %d\n", return_code);
       exit(-1);
     }
   }
