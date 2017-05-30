@@ -24,7 +24,9 @@ class ConcurrentHashMap {
 		void addAndInc(string key);
 		bool member(string key);
 		pair<string, unsigned int> maximum(unsigned int nt);
+		static pair<string, unsigned int> maximum(unsigned int p_archivos, unsigned int p_maximos, list<string>archs);
 		static void* maximum_thread(void *thread_args);
+		static void* mergeHashMap(void *thread_args);
 		static ConcurrentHashMap count_words(string arch);
 	  static ConcurrentHashMap count_words(list<string> archs);
 		static ConcurrentHashMap count_words(unsigned int num_threads, list<string> archs);
@@ -48,7 +50,6 @@ class ConcurrentHashMap {
 		  ConcurrentHashMap* map;
 		  list<string>::iterator* it_inicio;
 		  list<string>::iterator it_fin;
-		  pthread_mutex_t* mutex_inicio;
 		  pthread_mutex_t* mutex_it;
 			};
 
@@ -56,12 +57,19 @@ class ConcurrentHashMap {
 		  unsigned int thread_id;
 		  ConcurrentHashMap* map;
 		 	vector< pair<string, unsigned int> >* maximos;
-		  pthread_mutex_t* mutex_inicio;
+		  atomic<int>* fila;
+		};
+
+		struct thread_data_merge { 
+		  unsigned int map_id;
+		  unsigned int thread_id;
+		  ConcurrentHashMap* map;
+		  ConcurrentHashMap* merge_map;
 		  atomic<int>* fila;
 		};
 
 		pthread_mutex_t mutex[SIZE_TABLE];
-		pthread_mutex_t mutex_buscando_max;
+		pthread_mutex_t mutex_maximum;
 
 };
 
