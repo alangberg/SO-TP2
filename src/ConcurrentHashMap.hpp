@@ -25,6 +25,7 @@ class ConcurrentHashMap {
 		bool member(string key);
 		pair<string, unsigned int> maximum(unsigned int nt);
 		static pair<string, unsigned int> maximum(unsigned int p_archivos, unsigned int p_maximos, list<string>archs);
+		static pair<string, unsigned int> maximum_cw(unsigned int p_archivos, unsigned int p_maximos, list<string>archs);
 		static void* maximum_thread(void *thread_args);
 		static void* mergeHashMap(void *thread_args);
 		static ConcurrentHashMap count_words(string arch);
