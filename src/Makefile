@@ -9,7 +9,7 @@ LDLIBS = -lpthread
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c $<
 
-BIN = test-2
+BIN = test-2 test-5 test-9
 OBJ = ConcurrentHashMap.o
 
 all: $(BIN)
@@ -26,6 +26,9 @@ test-2-run: test-2
 
 test-3: $(OBJ) test-3.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ test-3.cpp $(OBJ) $(LDLIBS)
+
+test-9: $(OBJ) test-9.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ test-9.cpp $(OBJ) $(LDLIBS)
 
 test-3-run: test-3
 	awk -f corpus.awk corpus | sort >corpus-post
