@@ -12,14 +12,7 @@ ConcurrentHashMap::ConcurrentHashMap() {
   pthread_mutex_init(&mutex_maximum, NULL);
 }
   
-ConcurrentHashMap::~ConcurrentHashMap() {
-  // for (int i = 0; i < SIZE_TABLE; i++) {
-    // cout<<"borrando "<<i<<endl;
-    // delete tabla[i];
-    // cout<<"chau "<<i<<endl;
-  // }
-}
-
+ConcurrentHashMap::~ConcurrentHashMap() {}
 
 void ConcurrentHashMap::addAndInc(string key) {
   // aplicamos la funcion de hash sobre el primer caracter y obtenemos la posicion en la tabla
@@ -263,7 +256,7 @@ pair<string, unsigned int> ConcurrentHashMap::maximum(unsigned int p_archivos, u
   return max;
 }
 
-pair<string, unsigned int> ConcurrentHashMap::maximum_cw(unsigned int p_archivos, unsigned int p_maximos, list<string>archs) {
+pair<string, unsigned int> ConcurrentHashMap::maximum_cw(unsigned int p_archivos, unsigned int p_maximos, list<string> archs) {
   // leemos archivos usando count_words
   ConcurrentHashMap map = count_words(p_archivos, archs);
   // calculo del maximo sobre el ConcurrentHashMap en el que mergeamos todos los anteriores

@@ -30,20 +30,12 @@ public:
 
 	void push_front(const T& val) {
 		/* Completar. Debe ser atómico. */
-
-		//LINK DEL ROBO: http://en.cppreference.com/w/cpp/atomic/atomic_compare_exchange
-		
 		Nodo* new_node = new Nodo(val);
+    new_node->_next = _head.load(memory_order_relaxed); //siguiente del nodo nuevo = cabeza actual
 
-		new_node->_next = _head.load(); //siguiente del nodo nuevo = cabeza actual
-		_head.store(new_node);
-		//Ahora quiero que mi nodo nuevo sea la cabeza
-		//Podria haberse colado otro nodo nuevo y haberse hecho cabeza
-		//Tengo que actualizar mi next y ser yo cabeza
-
-		//while(!std::atomic_compare_exchange_weak_explicit(&_head, &new_node->_next, new_node, std::memory_order_release, std::memory_order_relaxed)){
-		//}
-
+    // ponemos new_node como nueva cabeza, pero si la cabeza dejo de ser lo que guardamos en new_node->next,
+    // (porque otro thread inserto un nodo justo ahora) reemplazamos su valor con la nueva cabeza e intentamos de nuevo 
+    while(!_head.compare_exchange_weak(new_node->_next, new_node, memory_order_release, memory_order_relaxed)); // el ciclo es vacio
 	}
 
 	T& front() const {
