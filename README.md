@@ -1,1 +1,1 @@
-# SO-TP2
+# SO-TP2 - Pthreads in a concurrentHashMap
